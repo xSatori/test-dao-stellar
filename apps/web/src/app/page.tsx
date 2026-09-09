@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { Activity, ChevronDown, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { DaoShell } from '@/components/dao-shell';
 import { PageSection } from '@/components/page-section';
-import { Badge, Button, Callout, Card, Heading, ShortId, Text } from '@/components/ui';
+import { Button, Callout, Card, Heading, ShortId, Text } from '@/components/ui';
 import { getDaoNetworkConfig, getDefaultDaoNetwork } from '@/lib/dao-config';
 import { useGoldskyActivityFeed, useGoldskyHealth } from '@/lib/goldsky-queries';
 import { useTokenInventory } from '@/lib/token-queries';
@@ -29,9 +29,10 @@ export default function Page() {
   const config = getDaoNetworkConfig(network);
   const [activityLimit, setActivityLimit] = useState(ACTIVITY_PAGE_SIZE);
   const [tokenLimit, setTokenLimit] = useState(TOKEN_PAGE_SIZE);
-  const { data: goldskyHealth, error: goldskyHealthError, isLoading: goldskyHealthLoading, mutate: refreshHealth } = useGoldskyHealth();
-  const { data: activityFeed, error: activityError, isLoading: activityLoading, mutate: refreshFeed } = useGoldskyActivityFeed(activityLimit);
-  const { data: tokens, error: tokenError, isLoading: tokenLoading, mutate: refreshTokens } = useTokenInventory();
+  const [refreshingDashboard, setRefreshingDashboard] = useState(false);
+  const { data: goldskyHealth, error: goldskyHealthError, isLoading: goldskyHealthLoading, isValidating: goldskyHealthRefreshing, mutate: refreshHealth } = useGoldskyHealth();
+  const { data: activityFeed, error: activityError, isLoading: activityLoading, isValidating: activityRefreshing, mutate: refreshFeed } = useGoldskyActivityFeed(activityLimit);
+  const { data: tokens, error: tokenError, isLoading: tokenLoading, isValidating: tokenRefreshing, mutate: refreshTokens } = useTokenInventory();
   const tokenItems = tokens?.items.slice(0, tokenLimit) ?? [];
   const canLoadMoreTokens = Boolean(tokens && tokens.items.length > tokenLimit);
   const activityItems = activityFeed?.items ?? [];
@@ -39,11 +40,23 @@ export default function Page() {
   const canLoadMoreActivity = Boolean(activityFeed?.hasMore);
   const indexerIsHealthy = goldskyHealth?.status === 'healthy';
   const indexerHealthLabel = goldskyHealthLoading ? 'Checking indexer health' : goldskyHealthError ? 'Indexer health unavailable' : indexerIsHealthy ? 'Indexer healthy' : 'Indexer needs attention';
+  const isDashboardRefreshing = refreshingDashboard || goldskyHealthLoading || goldskyHealthRefreshing || activityLoading || activityRefreshing || tokenLoading || tokenRefreshing;
+
+  async function refreshDashboard() {
+    if (isDashboardRefreshing) return;
+    setRefreshingDashboard(true);
+    try {
+      await Promise.all([refreshHealth(), refreshFeed(), refreshTokens()]);
+    } finally {
+      setRefreshingDashboard(false);
+    }
+  }
 
   return (
     <DaoShell>
       <PageSection title="Dashboard" description="Your DAO activity at a glance.">
         <div className="dashboard-controls">
+          {isDashboardRefreshing ? <Text className="dashboard-sync-status" role="status" aria-live="polite">Syncing…</Text> : null}
           <details className="dashboard-menu">
             <summary className="dashboard-menu__trigger">Contracts <ChevronDown aria-hidden="true" size={14} /></summary>
             <div className="dashboard-menu__panel dashboard-contract-menu">
@@ -60,7 +73,10 @@ export default function Page() {
             <summary className="dashboard-menu__trigger dashboard-menu__trigger--icon" aria-label="Dashboard options" title="Dashboard options"><MoreHorizontal aria-hidden="true" size={18} /></summary>
             <div className="dashboard-menu__panel dashboard-options-menu">
               <Text className="label">Dashboard options</Text>
-              <Text className="lede" style={{ margin: 0, fontSize: '0.84rem' }}>No additional dashboard options are available.</Text>
+              <Button type="button" variant="outline" size="sm" onClick={() => void refreshDashboard()} disabled={isDashboardRefreshing}>
+                <RefreshCw aria-hidden="true" className={isDashboardRefreshing ? 'is-spinning' : undefined} size={15} />
+                {isDashboardRefreshing ? 'Refreshing…' : 'Refresh dashboard'}
+              </Button>
             </div>
           </details>
         </div>
@@ -93,11 +109,7 @@ export default function Page() {
           <Card className="dashboard-secondary-card" p="5">
             <div className="dashboard-secondary-card__content">
               <div className="section-toolbar">
-                <Heading style={{ fontSize: '1.35rem', margin: 0 }}>Current live supply</Heading>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Badge>{tokenLoading ? 'Syncing' : `${tokens?.totalSupply ?? 0} live`}</Badge>
-                  <Button type="button" variant="outline" size="sm" onClick={() => void refreshTokens()} disabled={tokenLoading}>{tokenLoading ? 'Refreshing...' : 'Refresh tokens'}</Button>
-                </div>
+                <Heading style={{ fontSize: '1.35rem', margin: 0 }}>Current supply</Heading>
               </div>
               <div className="dashboard-secondary-card__scroll">
                 {tokenError ? <Callout variant="error" title="Token inventory unavailable" description={tokenError.message} /> : null}
@@ -120,14 +132,12 @@ export default function Page() {
                 <details className="dashboard-health-menu">
                   <summary className="dashboard-health-trigger" aria-label={`${indexerHealthLabel}. View indexer health`} title={indexerHealthLabel}><Activity aria-hidden="true" size={16} /><span className={`dashboard-health-dot${indexerIsHealthy ? ' dashboard-health-dot--healthy' : ''}`} aria-hidden="true" /></summary>
                   <div className="dashboard-health-panel">
-                    <div className="dashboard-health-panel__heading"><Text className="label">Indexer health</Text><Button type="button" variant="outline" size="sm" onClick={() => void refreshHealth()} disabled={goldskyHealthLoading}>{goldskyHealthLoading ? 'Refreshing...' : 'Refresh'}</Button></div>
+                    <div className="dashboard-health-panel__heading"><Text className="label">Indexer health</Text></div>
                     <Text className="lede" style={{ margin: 0, fontSize: '0.84rem' }}>{indexerHealthLabel}</Text>
                     {goldskyHealthError ? <Text className="lede" style={{ margin: 0, fontSize: '0.8rem' }}>{goldskyHealthError.message}</Text> : null}
                     {goldskyHealth ? <div className="dashboard-health-program"><Text style={{ margin: 0, fontWeight: 700 }}>Goldsky index</Text><Text className="lede" style={{ margin: 0, fontSize: '0.78rem' }}>{goldskyHealth.latestLedger ? `Ledger ${goldskyHealth.latestLedger}` : 'No ledger data'} | {goldskyHealth.totalEvents ?? 0} indexed events</Text></div> : null}
                   </div>
                 </details>
-                <Badge>{activityLoading ? 'Syncing' : 'Live'}</Badge>
-                <Button type="button" variant="outline" size="sm" onClick={() => void refreshFeed()} disabled={activityLoading}>{activityLoading ? 'Refreshing...' : 'Refresh feed'}</Button>
               </div>
             </div>
             {activityError ? <Callout variant="error" title="Activity feed unavailable" description={activityError.message} /> : null}
