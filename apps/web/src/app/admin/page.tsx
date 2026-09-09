@@ -7,7 +7,7 @@ import { DaoShell } from '@/components/dao-shell';
 import { PageSection } from '@/components/page-section';
 import { AdminSectionNav } from '@/components/admin/admin-section-nav';
 import { getDaoNetworkConfig, getDefaultDaoNetwork } from '@/lib/dao-config';
-import { useMercuryGovernorAuthorities, useMercuryMintAuthorities } from '@/lib/mercury-queries';
+import { useGoldskyGovernorAuthorities, useGoldskyMintAuthorities } from '@/lib/goldsky-queries';
 import { useDaoSessionStore } from '@/stores/dao-session-store';
 import { Grid, Stack } from 'styled-system/jsx';
 
@@ -43,8 +43,8 @@ function SectionCard({
 export default function AdminPage() {
   const session = useDaoSessionStore();
   const config = getDaoNetworkConfig(getDefaultDaoNetwork());
-  const { data: mintAuthorities } = useMercuryMintAuthorities();
-  const { data: governorAuthorities } = useMercuryGovernorAuthorities();
+  const { data: mintAuthorities } = useGoldskyMintAuthorities();
+  const { data: governorAuthorities } = useGoldskyGovernorAuthorities();
 
   const isOwner = Boolean(session.address && session.address === config.adminAddress);
   const hasMintAccess = Boolean(isOwner || mintAuthorities?.items.some((item) => item.authority === session.address));
@@ -103,6 +103,13 @@ export default function AdminPage() {
               description="Edit voting delay, voting period, proposal threshold, and quorum in one atomic batch."
               href="/admin/governance"
               allowed={hasGovernanceAccess}
+            />
+            <SectionCard
+              label="Owner"
+              title="Auction controls"
+              description="Pause or resume auction activity for emergency and maintenance operations."
+              href="/admin/auction"
+              allowed={isOwner}
             />
           </Grid>
         </Stack>

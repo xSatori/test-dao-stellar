@@ -1,6 +1,7 @@
 {
   "network": "testnet",
   "label": "builder",
+  "deploymentLedger": 4551728,
   "config": {
     "label": "builder",
     "adminAddress": "GCLGEIQB4RCG63LSIBSHQ6T67YICWKTHSORNHVXHFVVGXISZU3MQU6CO",
@@ -37,24 +38,29 @@
     "tokenBaseUri": "https://test-dao-stellar-web.vercel.app/api/token/",
     "identityName": "testnet-dev",
     "saltSuffix": null,
-    "deployArtifactPath": "deploys/builder-testnet.json"
+    "deployArtifactPath": "deploys/builder-testnet.json",
+    "deploymentLedger": 4551728
   },
   "transactions": {
     "token": {
       "deployedAt": "2026-09-07T11:57:09.921Z",
-      "txHash": "22451ea84e95e52254d603e909dc67d9ae266be70b45c9ff7e2fdfaf1302f801"
+      "txHash": "22451ea84e95e52254d603e909dc67d9ae266be70b45c9ff7e2fdfaf1302f801",
+      "ledger": 4551728
     },
     "treasury": {
       "deployedAt": "2026-09-07T11:57:19.850Z",
-      "txHash": "6ec05b0d3998b217075bf2f7c63534717b1553f6c4fbe0e05dbed3375d2f6ca3"
+      "txHash": "6ec05b0d3998b217075bf2f7c63534717b1553f6c4fbe0e05dbed3375d2f6ca3",
+      "ledger": 4551730
     },
     "governor": {
       "deployedAt": "2026-09-07T11:57:28.351Z",
-      "txHash": "ad685b99833c4213c5e37445eaa7a94b470777dc8427c168fed41a2f7c212dbc"
+      "txHash": "ad685b99833c4213c5e37445eaa7a94b470777dc8427c168fed41a2f7c212dbc",
+      "ledger": 4551732
     },
     "auction": {
       "deployedAt": "2026-09-07T11:57:39.202Z",
-      "txHash": "538e9d992bb66348f3496b52ccbd845a967130b25cfdf65d310a7546765110d8"
+      "txHash": "538e9d992bb66348f3496b52ccbd845a967130b25cfdf65d310a7546765110d8",
+      "ledger": 4551734
     }
   }
 }

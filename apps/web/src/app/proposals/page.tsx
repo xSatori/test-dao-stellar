@@ -16,11 +16,6 @@ import { getDaoNetworkConfig, getDefaultDaoNetwork } from '@/lib/dao-config';
 import { useVotingPower, type VotingPowerSnapshot } from '@/lib/voting-power';
 import { useDaoSessionStore } from '@/stores/dao-session-store';
 
-function shorten(value: string) {
-  if (value.length <= 16) return value;
-  return `${value.slice(0, 6)}…${value.slice(-6)}`;
-}
-
 function formatTimestamp(timestamp: number) {
   if (!timestamp) return '—';
   try {
@@ -142,9 +137,9 @@ export default function ProposalsPage() {
               <div className="proposal-list" role="list" aria-label="Proposals in reverse chronological order">
                 {visibleItems.map((item) => (
                   <div key={item.proposalId} role="listitem">
-                    <Link className="proposal-row" href={`/proposals/${item.proposalId}`}>
+                    <Link className="proposal-row" href={`/proposals/${item.proposalNumber}`}>
                     <div className="proposal-row__identity">
-                      <Text className="proposal-row__id mono">#{shorten(item.proposalId)}</Text>
+                      <Text className="proposal-row__id mono">#{item.proposalNumber}</Text>
                       <div className="proposal-row__content">
                         <Heading className="proposal-row__title">{item.metadata.title}</Heading>
                         <Text className="proposal-row__date">{formatTimestamp(item.timestamp)}</Text>

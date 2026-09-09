@@ -6,7 +6,7 @@ import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronDown, Landmark, LayoutDashboard, LogOut, Settings, ShieldAlert, Users, Vote, Wallet } from 'lucide-react';
+import { ChevronDown, Gavel, Landmark, LayoutDashboard, LogOut, Settings, ShieldAlert, Users, Vote, Wallet } from 'lucide-react';
 import { defaultModules } from '@creit.tech/stellar-wallets-kit/modules/utils';
 import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit/sdk';
 import { KitEventType } from '@creit.tech/stellar-wallets-kit/types';
@@ -17,6 +17,7 @@ import { useDaoSessionStore } from '@/stores/dao-session-store';
 const BASE_NAV_ITEMS: Array<{ href: Route; label: string; icon: LucideIcon }> = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/proposals', label: 'Proposals', icon: Vote },
+  { href: '/auctions', label: 'Auctions', icon: Gavel },
   { href: '/treasury', label: 'Treasury', icon: Landmark },
   { href: '/members', label: 'Members', icon: Users }
 ];
