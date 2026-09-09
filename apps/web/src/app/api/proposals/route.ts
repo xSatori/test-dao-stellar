@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Client as GovernorClient } from '@stellar-dao/governor-bindings';
 import { getDaoNetworkConfig, getDefaultDaoNetwork } from '@/lib/dao-config';
-import { getMercuryActivityFeed, getMercuryProposalDetail } from '@/lib/mercury';
+import { getMercuryActivityFeed, getMercuryProposalDetail, getMercuryProposalVotes } from '@/lib/mercury';
 import { proposalIdToBuffer } from '@/lib/proposal-id';
 import { parseProposalMetadata, type ProposalMetadata } from '@/lib/proposal-metadata';
 import { proposalStateLabel, type ProposalState as ProposalStateValue } from '@/lib/proposal-state';
@@ -15,6 +15,11 @@ type ProposalListItem = {
   timestamp: number;
   txHash: string;
   contractId: string;
+  voteTotals: {
+    forVotes: string;
+    againstVotes: string;
+    abstainVotes: string;
+  } | null;
 };
 
 type ProposalGroup = {
@@ -27,6 +32,29 @@ async function fetchProposalState(client: InstanceType<typeof GovernorClient>, p
   const proposalBuffer = proposalIdToBuffer(proposalId);
   const stateTx = await client.proposal_state({ proposal_id: proposalBuffer });
   return stateTx.result;
+}
+
+function summarizeVotes(votes: Awaited<ReturnType<typeof getMercuryProposalVotes>>['items']) {
+  const totals = votes.reduce(
+    (result, vote) => {
+      try {
+        const weight = BigInt(vote.weight);
+        if (vote.support === 1) result.forVotes += weight;
+        else if (vote.support === 0) result.againstVotes += weight;
+        else if (vote.support === 2) result.abstainVotes += weight;
+      } catch {
+        // Ignore malformed indexed weights rather than misreporting a total.
+      }
+      return result;
+    },
+    { forVotes: 0n, againstVotes: 0n, abstainVotes: 0n }
+  );
+
+  return {
+    forVotes: totals.forVotes.toString(),
+    againstVotes: totals.againstVotes.toString(),
+    abstainVotes: totals.abstainVotes.toString()
+  };
 }
 
 export async function GET(request: Request) {
@@ -73,8 +101,12 @@ export async function GET(request: Request) {
         .sort((a, b) => b.latestTimestamp - a.latestTimestamp || b.latestLedger - a.latestLedger)
         .slice(0, limit)
         .map(async (group): Promise<ProposalListItem> => {
-          const detail = await getMercuryProposalDetail(group.proposalId).catch(() => null);
+          const [detail, voteResponse] = await Promise.all([
+            getMercuryProposalDetail(group.proposalId).catch(() => null),
+            getMercuryProposalVotes(group.proposalId).catch(() => null)
+          ]);
           const metadata = parseProposalMetadata(detail?.description ?? '');
+          const voteTotals = voteResponse && !voteResponse.message ? summarizeVotes(voteResponse.items) : null;
 
           try {
             const state = await fetchProposalState(client, group.proposalId);
@@ -86,7 +118,8 @@ export async function GET(request: Request) {
               ledger: detail?.ledger ?? group.latestLedger,
               timestamp: detail?.timestamp ?? group.latestTimestamp,
               txHash: detail?.txHash ?? '',
-              contractId: detail?.contractId ?? ''
+              contractId: detail?.contractId ?? '',
+              voteTotals
             };
           } catch {
             return {
@@ -97,7 +130,8 @@ export async function GET(request: Request) {
               ledger: detail?.ledger ?? group.latestLedger,
               timestamp: detail?.timestamp ?? group.latestTimestamp,
               txHash: detail?.txHash ?? '',
-              contractId: detail?.contractId ?? ''
+              contractId: detail?.contractId ?? '',
+              voteTotals
             };
           }
         })

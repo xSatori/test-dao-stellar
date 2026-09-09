@@ -5,7 +5,7 @@ import { Client as TokenClient } from '@stellar-dao/token-bindings';
 import { StellarWalletsKit } from '@creit.tech/stellar-wallets-kit/sdk';
 import { DaoShell } from '@/components/dao-shell';
 import { PageSection } from '@/components/page-section';
-import { Badge, Button, Card, Heading, ShortId, Text } from '@/components/ui';
+import { Badge, Button, Callout, Card, ShortId, Text } from '@/components/ui';
 import { getDaoNetworkConfig, getDefaultDaoNetwork } from '@/lib/dao-config';
 import { useMercuryActivityFeed } from '@/lib/mercury-queries';
 import { useDaoSessionStore } from '@/stores/dao-session-store';
@@ -79,7 +79,9 @@ export default function MembersPage() {
   );
 
   const rows = useMemo(
-    () => balanceRows.filter((row) => Number(row.balance) > 0),
+    () => balanceRows
+      .filter((row) => Number(row.balance) > 0)
+      .sort((a, b) => Number(b.balance) - Number(a.balance)),
     [balanceRows]
   );
   const visibleBalanceLoading = hasBalanceQuery && balanceLoading;
@@ -88,28 +90,47 @@ export default function MembersPage() {
   return (
     <DaoShell>
       <PageSection
-        eyebrow="Members"
-        title="Voting power directory"
+        title="Members"
         description="A Mercury-backed view of token holders with non-zero balances."
       >
         <Card p="5">
           <Stack gap="3">
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <div className="section-toolbar">
               <Text className="label">Mercury members</Text>
               <Button type="button" variant="outline" size="sm" onClick={() => void mutate()} disabled={isLoading}>
                 {isLoading ? 'Refreshing...' : 'Refresh'}
               </Button>
             </div>
 
-            {error ? <Text className="lede" style={{ margin: 0 }}>{error.message}</Text> : null}
-            {visibleBalanceError ? <Text className="lede" style={{ margin: 0 }}>{visibleBalanceError}</Text> : null}
-            {visibleBalanceLoading ? <Text className="lede" style={{ margin: 0 }}>Loading balances...</Text> : null}
+            {error ? <Callout variant="error" title="Member directory unavailable" description={error.message} /> : null}
+            {visibleBalanceError ? <Callout variant="error" title="Balance lookup unavailable" description={visibleBalanceError} /> : null}
+            {visibleBalanceLoading ? <Callout variant="info" title="Loading member balances…" /> : null}
             {!visibleBalanceLoading && !rows.length ? (
-              <Text className="lede" style={{ margin: 0 }}>No token holders indexed yet.</Text>
-            ) : (
-              <Grid columns={{ base: 1, lg: 2 }} gap="4">
+              <div className="empty-state" role="status"><Text className="lede" style={{ margin: '0 auto' }}>No token holders are indexed yet. Members appear after a mint or transfer is confirmed.</Text></div>
+            ) : (<>
+              <div className="members-table-wrap">
+                <table className="members-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Address</th>
+                      <th scope="col">Balance / voting power</th>
+                      <th scope="col">Rank</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, index) => (
+                      <tr key={row.address}>
+                        <td><ShortId value={row.address} /></td>
+                        <td className="members-table-number">{row.balance}</td>
+                        <td className="members-table-number">#{index + 1}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Grid className="members-card-list" columns={{ base: 1 }} gap="3">
                 {rows.map((row, index) => (
-                  <Card key={row.address} p="4">
+                  <Card className="interactive-card" key={row.address} p="4">
                     <Stack gap="2">
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                         <Badge>#{index + 1}</Badge>
@@ -120,7 +141,7 @@ export default function MembersPage() {
                   </Card>
                 ))}
               </Grid>
-            )}
+            </>)}
           </Stack>
         </Card>
       </PageSection>
